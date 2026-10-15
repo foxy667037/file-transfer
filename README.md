@@ -1,4 +1,4 @@
-# Termux LAN Storage
+# File Share
 
 An offline, hotspot-based file transfer server. Runs in Termux on Android
 (or on any machine with Node.js). Other devices on the same Wi-Fi or hotspot
@@ -7,6 +7,7 @@ open a browser and upload/download files — no internet required.
 ## Status
 
 **Working:**
+
 - Chunked uploads (4 MiB chunks, up to 6 in parallel)
 - Per-chunk SHA-256 verification and retry with exponential backoff
 - Resume support (in-progress chunks survive server restarts)
@@ -14,6 +15,7 @@ open a browser and upload/download files — no internet required.
 - Web UI: file list, upload progress, download links
 
 **Not yet implemented:**
+
 - Authentication or permissions
 - HTTPS / TLS (uses plain HTTP)
 - Admin dashboard (connected clients, transfer history)
@@ -57,7 +59,7 @@ The server prints its address at startup:
 ```
 Server running at http://0.0.0.0:5001
 --- Network Interfaces ---
-  wlan0: http://192.168.0.118:5001
+      wlan0: http://192.168.0.118:5001
 --------------------------
 ```
 
@@ -71,7 +73,7 @@ pkg update && pkg upgrade -y
 pkg install nodejs-lts git -y
 
 git clone <your-repo-url> file share
-cd termux-lan-storage
+cd file share
 npm install
 cp .env.example .env
 
@@ -108,29 +110,29 @@ Windows-specific notes:
 
 All settings live in `.env`:
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `PORT` | `5001` | TCP port the server listens on |
-| `HOST` | `127.0.0.1` | Bind address. Use `0.0.0.0` to accept LAN connections |
-| `MAX_FILE_SIZE` | `5368709120` (5 GiB) | Reject uploads larger than this |
-| `DEFAULT_CHUNK_SIZE` | `4194304` (4 MiB) | Chunk size for chunked uploads |
-| `MAX_PARALLEL_CHUNKS` | `6` | Client-side concurrent chunk uploads (client reads this from the status endpoint once implemented) |
+| Variable              | Default              | Meaning                                                                                            |
+| --------------------- | -------------------- | -------------------------------------------------------------------------------------------------- |
+| `PORT`                | `5001`               | TCP port the server listens on                                                                     |
+| `HOST`                | `127.0.0.1`          | Bind address. Use `0.0.0.0` to accept LAN connections                                              |
+| `MAX_FILE_SIZE`       | `5368709120` (5 GiB) | Reject uploads larger than this                                                                    |
+| `DEFAULT_CHUNK_SIZE`  | `4194304` (4 MiB)    | Chunk size for chunked uploads                                                                     |
+| `MAX_PARALLEL_CHUNKS` | `6`                  | Client-side concurrent chunk uploads (client reads this from the status endpoint once implemented) |
 
 ## API
 
 All JSON endpoints live under `/api`. Binary downloads live under `/files`.
 
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/status` | Server status + timestamp |
-| `GET` | `/api/files` | List of completed files with sizes |
-| `POST` | `/api/upload?fileName=<name>` | Simple single-stream upload (no chunking) |
-| `GET` | `/files/:fileName` | Download a file (streams, `Content-Disposition: attachment`) |
-| `POST` | `/api/upload/init` | Start a chunked upload. Body: `{ fileName, fileSize, chunkSize, totalChunks }`. Returns `{ uploadId }` |
-| `PUT` | `/api/upload/:uploadId/chunk/:index` | Upload one chunk. Header `X-Chunk-Hash: <sha256-hex>`, body is raw bytes |
-| `GET` | `/api/upload/:uploadId/status` | Which chunks are received / missing |
-| `POST` | `/api/upload/:uploadId/complete` | Assemble all chunks into `uploads/<fileName>` |
-| `DELETE` | `/api/upload/:uploadId` | Abandon a chunked upload and delete its workspace |
+| Method   | Path                                 | Purpose                                                                                                |
+| -------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `GET`    | `/api/status`                        | Server status + timestamp                                                                              |
+| `GET`    | `/api/files`                         | List of completed files with sizes                                                                     |
+| `POST`   | `/api/upload?fileName=<name>`        | Simple single-stream upload (no chunking)                                                              |
+| `GET`    | `/files/:fileName`                   | Download a file (streams, `Content-Disposition: attachment`)                                           |
+| `POST`   | `/api/upload/init`                   | Start a chunked upload. Body: `{ fileName, fileSize, chunkSize, totalChunks }`. Returns `{ uploadId }` |
+| `PUT`    | `/api/upload/:uploadId/chunk/:index` | Upload one chunk. Header `X-Chunk-Hash: <sha256-hex>`, body is raw bytes                               |
+| `GET`    | `/api/upload/:uploadId/status`       | Which chunks are received / missing                                                                    |
+| `POST`   | `/api/upload/:uploadId/complete`     | Assemble all chunks into `uploads/<fileName>`                                                          |
+| `DELETE` | `/api/upload/:uploadId`              | Abandon a chunked upload and delete its workspace                                                      |
 
 ## Project layout
 
@@ -177,14 +179,14 @@ tells the client what is missing.
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| Phone cannot reach the server | Firewall, wrong IP, or different network | Check `ipconfig` / `ifconfig wlan0`; confirm same SSID; add firewall rule for TCP `PORT` |
-| Uploads abort at ~5 minutes | Node's default `requestTimeout` | Already disabled in `server.js` via `server.requestTimeout = 0` |
-| `crypto.subtle is undefined` on phone | Page is on plain HTTP (non-localhost) | Ensure `/vendor/sha256.umd.min.js` is loaded and `createSHA256Hex` falls back to `hashwasm` |
-| `hashwasm is not defined` | UMD script missing or loaded after the module script | `<script src="/vendor/sha256.umd.min.js"></script>` must come **before** `<script type="module" src="/js/app.js"></script>` |
-| Slow transfers | Wi-Fi link rate | Check `netsh wlan show interfaces`; move to 5 GHz; change channel; update adapter driver |
-| `EADDRINUSE` | Port already in use | Change `PORT` in `.env`, or kill the existing Node process |
+| Symptom                               | Likely cause                                         | Fix                                                                                                                         |
+| ------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Phone cannot reach the server         | Firewall, wrong IP, or different network             | Check `ipconfig` / `ifconfig wlan0`; confirm same SSID; add firewall rule for TCP `PORT`                                    |
+| Uploads abort at ~5 minutes           | Node's default `requestTimeout`                      | Already disabled in `server.js` via `server.requestTimeout = 0`                                                             |
+| `crypto.subtle is undefined` on phone | Page is on plain HTTP (non-localhost)                | Ensure `/vendor/sha256.umd.min.js` is loaded and `createSHA256Hex` falls back to `hashwasm`                                 |
+| `hashwasm is not defined`             | UMD script missing or loaded after the module script | `<script src="/vendor/sha256.umd.min.js"></script>` must come **before** `<script type="module" src="/js/app.js"></script>` |
+| Slow transfers                        | Wi-Fi link rate                                      | Check `netsh wlan show interfaces`; move to 5 GHz; change channel; update adapter driver                                    |
+| `EADDRINUSE`                          | Port already in use                                  | Change `PORT` in `.env`, or kill the existing Node process                                                                  |
 
 ## License
 
