@@ -36,6 +36,7 @@ desktop.ini
 *.swo
 
 # --- Build / coverage ---
+dist/
 build/
 coverage/
 

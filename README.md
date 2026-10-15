@@ -29,7 +29,7 @@ open a browser and upload/download files — no internet required.
 ## Install
 
 ```bash
-git clone <your-repo-url> termux-lan-storage
+git clone <your-repo-url> file share
 cd termux-lan-storage
 npm install
 cp .env.example .env
@@ -70,7 +70,7 @@ device connected to the same Wi-Fi or hotspot.
 pkg update && pkg upgrade -y
 pkg install nodejs-lts git -y
 
-git clone <your-repo-url> termux-lan-storage
+git clone <your-repo-url> file share
 cd termux-lan-storage
 npm install
 cp .env.example .env

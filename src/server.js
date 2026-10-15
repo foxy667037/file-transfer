@@ -27,7 +27,7 @@ const fileCompletion = new Set();
 const PORT = process.env.PORT || 5001;
 const HOST = process.env.HOST || "0.0.0.0";
 const MAX_FILE_SIZE = process.env.MAX_FILE_SIZE || 5 * 1024 * 1024 * 1024;
-const DEFAULT_CHUNK_SIZE = process.env.DEFAULT_CHUNK_SIZE || 4 * 1024 * 1024;
+const DEFAULT_CHUNK_SIZE = process.env.DEFAULT_CHUNK_SIZE || 16 * 1024 * 1024;
 const UUID_REGEX_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // pulic and upload directory
@@ -36,7 +36,7 @@ const PUBLIC_DIR = path.resolve(__dirname, "public");
 const UPLOAD_DIR = path.resolve(__dirname, "uploads");
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-const TEMP_UPLOAD_DIR = path.resolve(UPLOAD_DIR, "temp_uploads");
+const TEMP_UPLOAD_DIR = path.resolve(__dirname, "temp_uploads");
 fs.mkdirSync(TEMP_UPLOAD_DIR, { recursive: true });
 
 // server instance
@@ -75,41 +75,7 @@ app.get("/api/ping", (req, res) => {
   res.status(200).type("text/plain").send("pong.........");
 });
 
-// real routes: routes for file transfer, and list of files
-app.post("/api/upload", async (req, res) => {
-  // return filename along with path
-  const fileName = req.query.fileName;
-
-  if (typeof fileName !== "string" || fileName.length <= 0) {
-    return res.status(400).json({ errorMsg: "Missing File" });
-  }
-
-  // return filename
-  const safeFileName = path.basename(fileName);
-
-  if (
-    safeFileName !== fileName ||
-    safeFileName === ".." ||
-    safeFileName === "."
-  ) {
-    return res.status(400).json({ errorMsg: "Invalid filename" });
-  }
-
-  const destinationPath = path.resolve(UPLOAD_DIR, safeFileName);
-
-  try {
-    const fileStream = fs.createWriteStream(destinationPath);
-    await pipeline(req, fileStream);
-
-    const sizeOfFile = fs.statSync(destinationPath).size;
-    console.log(`Saved ${safeFileName} (${sizeOfFile} bytes)`);
-
-    res.status(201).json({ savedAs: safeFileName, bytes: sizeOfFile });
-  } catch (error) {
-    console.error("Upload failed:", error);
-    res.status(500).json({ error: "Upload failed" });
-  }
-});
+// routes for file download, and list of files
 app.get("/files/:fileName", async (req, res) => {
   const { fileName } = req.params;
 
@@ -162,7 +128,7 @@ app.get("/api/files", async (req, res) => {
   }
 });
 
-// updated: new upload route
+// updated: new upload route (upload pipeline)
 app.post("/api/upload/init", express.json(), async (req, res) => {
   const { fileName, fileSize, totalChunks, eachChunkSize } = req.body ?? {};
 
@@ -195,11 +161,11 @@ app.post("/api/upload/init", express.json(), async (req, res) => {
   if (
     !Number.isInteger(eachChunkSize) ||
     eachChunkSize <= 0 ||
-    eachChunkSize > 16 * 1024 * 1024
+    eachChunkSize > DEFAULT_CHUNK_SIZE
   ) {
     return res
       .status(400)
-      .json({ error: "chunkSize must be a positive integer <= 16 MiB" });
+      .json({ error: "chunkSize must be a positive integer <= 4 MiB" });
   }
   if (!Number.isInteger(totalChunks) || totalChunks <= 0) {
     return res
