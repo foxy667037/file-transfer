@@ -25,7 +25,7 @@ const fetchFiles = async (
     const files_list = data.list_of_files || [];
 
     loadingState.classList.add("hidden");
-    fileCountBadge.textContent = `${files_list.length - 1} file${files_list.length === 1 ? "" : "s"}`;
+    fileCountBadge.textContent = `${files_list.length} file${files_list.length === 1 ? "" : "s"}`;
 
     if (!files_list || files_list.length === 0) {
       emptyState.classList.remove("hidden");
@@ -34,8 +34,6 @@ const fetchFiles = async (
 
     // Render each file row
     files_list.forEach((file) => {
-      if (file.file_name === "temp_uploads") return;
-
       const fileName = file.file_name || "Unnamed file";
       const fileSizeFormatted = formatBytes(file.file_size);
       const fileExt = fileName.includes(".")

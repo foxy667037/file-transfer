@@ -477,6 +477,6 @@ const server = app.listen(PORT, HOST, () => {
 });
 
 // Allow slow, large uploads over local Wi-Fi.
-server.requestTimeout = 0; // disable per-request timeout
-server.headersTimeout = 60_000; // keep 60s for header arrival
-server.keepAliveTimeout = 65_000; // keep 65s, just above headersTimeout
+server.requestTimeout = 0;
+server.headersTimeout = 60_000;
+server.keepAliveTimeout = 65_000;
